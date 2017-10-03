@@ -1,12 +1,9 @@
-## 
+## Build + RUN
 
 ```sh
 	docker build -t face-detector .
-	docker run -it -v $(pwd):/face-detector face-detector
 	docker run -p 9000:9000 -p 8000:8000 -it -v $(pwd):/face-detector face-detector
 	docker run -p 9000:9000 -p 8000:8000 -it -v $(pwd):/face-detector face-detector /bin/bash -l -c '/root/openface/demos/web/start-servers.sh'
-	
-	docker run -p 9000:9000 -p 8000:8000 -it -v $(pwd):/face-detector face-detector /bin/bash -l -c '/face-detector/start-servers.sh'
 ```
 
 
