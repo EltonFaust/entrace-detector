@@ -1,0 +1,18 @@
+{
+  "name": "face-detector",
+  "version": "1.0.0",
+  "description": "```sh \tdocker build -t face-detector . \tdocker run -it -v $(pwd):/face-detector face-detector \tdocker run -p 9000:9000 -p 8000:8000 -it -v $(pwd):/face-detector face-detector \tdocker run -p 9000:9000 -p 8000:8000 -it -v $(pwd):/face-detector face-detector /bin/bash -l -c '/root/openface/demos/web/start-servers.sh' ```",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^4.0.0",
+    "express": "^4.15.2",
+    "request": "^2.82.0",
+    "socket.io": "^2.0.3",
+    "ws": "^3.2.0"
+  }
+}
