@@ -11,6 +11,6 @@ RUN curl -sL https://deb.nodesource.com/setup_7.x | bash \
 VOLUME /face-detector
 WORKDIR /face-detector
 
-EXPOSE 3000 8000 9000
+EXPOSE 3000
 
 CMD /bin/bash -l -c '/face-detector/start-servers.sh'
