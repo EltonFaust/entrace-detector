@@ -10,10 +10,10 @@ const ws = new WebSocket(process.env.PERSON_IDENTIFIER_CAM_WS);
 let currentImageData = null;
 
 const loadImage = () => {
-	request.get(process.env.MEDIATOR_SHOT_BASE_URL.replace(/\{rand\}/, Math.random()), (error, response, body) => {
+	request({url: process.env.MEDIATOR_SHOT_BASE_URL.replace(/\{rand\}/, Math.random()), encoding: 'binary'}, (error, response, body) => {
 	    if (!error && response.statusCode == 200) {
 	        console.log('Image loaded succefully');
-	        currentImageData = new Buffer(body).toString('base64');
+	        currentImageData = new Buffer(body, 'binary').toString('base64');
 	    } else {
 	    	console.log('Cam mediator failed to load image')
 	    	currentImageData = null;
@@ -32,8 +32,6 @@ const sendWSMessage = (type, data) => {
 }
 
 const sendCurrentImage = () => {
-	console.log('sendCurrentImage');
-
 	if (currentImageData == null) {
 		return;
 	}

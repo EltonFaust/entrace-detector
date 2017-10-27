@@ -55,10 +55,16 @@ wssCamMediator.on('connection', (ws) => {
 			  			return;
 			  		}
 
-			  		let commang = '/root/openface/demos/classifier.py infer ./data/project_dataset/features/classifier.pkl ./data/proccess/' + data.manager_id + '.' + data.format;
-			  		let classifierResult = execSync(commang).toString();
-
-			  		console.log('Classifier result', classifierResult);
+			  		try {
+				  		let commang = '/root/openface/demos/classifier.py infer /face-detector/data/project_dataset/features/classifier.pkl /face-detector/data/process/' + data.manager_id + '.' + data.format;
+				  		let commandResult = execSync(commang).toString();
+				  		let classifierResult = commandResult.match(/([0-9]{11})[^\d]+([\d|\.]+)/);
+			  			
+				  		console.log('Classifier result', commandResult);
+				  		// console.log('Classifier result', classifierResult[1], parseFloat(classifierResult[2]));
+			  		} catch(e) {
+			  			console.log(e.message);
+			  		}
 
 					managers[data.manager_id].isReceiving = true;
 			  		ws.send(JSON.stringify({type: 'PROCESSED'}));
