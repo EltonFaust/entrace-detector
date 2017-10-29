@@ -7,17 +7,19 @@ cd $(dirname $0)
 mkdir -p /tmp
 LOG_FILE='./logs/sockets.log'
 
+echo '' > $LOG_FILE
+
 echo "Initializing person identifier"
 npm run person-identifier &>> $LOG_FILE &
 
 echo "Waiting few seconds"
-sleep 3
+sleep 5
 
 echo "Initializing entrace manager"
 npm run entrace-manager &>> $LOG_FILE &
 
 echo "Waiting few seconds"
-sleep 3
+sleep 5
 
 echo "Initializing cam mediator"
 npm run cam-mediator &>> $LOG_FILE &

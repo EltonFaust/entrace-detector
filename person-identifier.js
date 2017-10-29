@@ -10,19 +10,26 @@ const wssCamMediator = new WebSocket.Server({ port: 9000 });
 const wssEntraceManager = new WebSocket.Server({ port: 9001 });
 
 let managers = {};
-let entraceNames = process.env.ENTRACE_MANAGER_NAMES.split(',');
+let managerNames = process.env.ENTRACE_MANAGER_NAMES.split(',');
 
 console.log('Pre setting managers configs');
 process.env.ENTRACE_MANAGER_IDS.split(',').forEach((manager_id, i) => {
-	console.log('Set manager %s with identifier %s', entraceNames[i], manager_id);
+	console.log('Set manager %s with identifier %s', managerNames[i], manager_id);
 
 	managers[manager_id] = {
-		name: entraceNames[i],
+		name: managerNames[i],
 		isReceiving: true,
 		client: null,
 		mediators: {},
 	};
 });
+
+const sendToWS = (ws, type, data) => {
+	data = data || {};
+	data.type = type;
+
+	ws.send(JSON.stringify(data));
+}
  
 wssCamMediator.on('connection', (ws) => {
 	console.log('Cam mediator connected');
@@ -39,7 +46,7 @@ wssCamMediator.on('connection', (ws) => {
 			case 'INITIALIZE':
 				console.log('Mediator with id %s set to manager with id %s', data.mediator_id, data.manager_id)
 				managers[data.manager_id].mediators[data.mediator_id] = ws;
-				ws.send(JSON.stringify({type: 'INITIALIZED'}));
+				sendToWS(ws, 'INITIALIZED');
 				break;
 			case 'IMAGE':
 				if (!managers[data.manager_id].isReceiving) {
@@ -67,7 +74,7 @@ wssCamMediator.on('connection', (ws) => {
 			  		}
 
 					managers[data.manager_id].isReceiving = true;
-			  		ws.send(JSON.stringify({type: 'PROCESSED'}));
+			  		sendToWS(ws, 'PROCESSED');
 				});
 				break;
 			// case '':

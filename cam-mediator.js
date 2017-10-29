@@ -22,11 +22,12 @@ const loadImage = () => {
 	});
 }
 
-const sendWSMessage = (type, data) => {
+const sendToWS = (type, data) => {
 	data = data || {};
 	data.type = type;
 	data.manager_id = process.env.MEDIATOR_MANAGER_ID;
 	data.mediator_id = process.env.MEDIATOR_ID;
+	data.entrace_id = process.env.MEDIATOR_ENTRACE_ID;
 
 	ws.send(JSON.stringify(data));
 }
@@ -37,11 +38,11 @@ const sendCurrentImage = () => {
 	}
 
 	console.log('Mediator sending image');
-	sendWSMessage('IMAGE', {format: 'jpg', data: currentImageData,});
+	sendToWS('IMAGE', {format: 'jpg', data: currentImageData,});
 }
 
 ws.on('open', () => {
-	sendWSMessage('INITIALIZE');
+	sendToWS('INITIALIZE');
 });
 
 ws.on('message', (data) => {
