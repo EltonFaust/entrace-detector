@@ -39,11 +39,14 @@ let occourences = [];
 console.log('Pre setting available entraces');
 
 let entraceNames = process.env.ENTRACE_MANAGER_ENTRACES_NAMES.split(',');
+let entraceUrlImage = process.env.ENTRACE_MANAGER_ENTRACES_URL_IMAGE.split(',');
+
 process.env.ENTRACE_MANAGER_ENTRACES_IDS.split(',').forEach((entrace_id, i) => {
     console.log('Set entrace %s with identifier %s', entraceNames[i], entrace_id);
 
     entraces[entrace_id] = {
         name: entraceNames[i],
+        urlImage: entraceUrlImage[i],
         isBlocked: true,
         users: [],
     };
@@ -54,6 +57,13 @@ const sendToWS = (ws, type, data) => {
     data.type = type;
 
     ws.send(JSON.stringify(data));
+}
+const sendToIdentifierWS = (entraceId, type, data) => {
+    data = data || {};
+    data.entrace_id = entraceId;
+    data.type = type;
+
+    wsIdentifier.send(JSON.stringify(data));
 }
 
 wssUsers.on('connection', (ws) => {
@@ -116,7 +126,11 @@ wssUsers.on('error', (e) => {
 })
 
 wsIdentifier.on('open', () => {
-    console.log('Manager connected to identifier');
+    console.log('Manager connected to identifier, initializing identifier for entraces');
+
+    for (let entraceId in entraces) {
+        sendToIdentifierWS(entraceId, 'initialize', {url_image: entraces[entraceId].urlImage})
+    }
 });
 
 wsIdentifier.on('message', (data) => {
