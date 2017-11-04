@@ -1,6 +1,11 @@
 require('https').globalAgent.options.rejectUnauthorized = false;
 require('dotenv').config();
 
+console.log('Waiting 20 secs')
+require("child_process").execSync('sleep 10');
+console.log('passed 20 secs')
+
+
 const express = require('express');
 const app = express();
 
@@ -48,6 +53,7 @@ process.env.ENTRACE_MANAGER_ENTRACES_IDS.split(',').forEach((entrace_id, i) => {
         name: entraceNames[i],
         urlImage: entraceUrlImage[i],
         isBlocked: true,
+        isReceiving: false,
         users: [],
     };
 });
@@ -60,6 +66,7 @@ const sendToWS = (ws, type, data) => {
 }
 const sendToIdentifierWS = (entraceId, type, data) => {
     data = data || {};
+    data.manager_id = process.env.ENTRACE_MANAGER_ID;
     data.entrace_id = entraceId;
     data.type = type;
 
@@ -134,7 +141,23 @@ wsIdentifier.on('open', () => {
 });
 
 wsIdentifier.on('message', (data) => {
+    console.log('Message "%s" received from person identifier', data);
     data = JSON.parse(data);
+
+    switch (data.type) {
+        case 'initialized':
+            setTimeout(() => {
+                entraces[data.entrace_id].isBlocked = false;
+                entraces[data.entrace_id].isReceiving = true;
+
+                sendToIdentifierWS(data.entrace_id, 'start_identifier');
+            }, 2000);
+            break;
+        case 'identified':
+            break;
+        case 'not_identified':
+            break;
+    }
 });
 
 wsIdentifier.on('error', (e) => {

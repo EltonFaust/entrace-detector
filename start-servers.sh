@@ -9,21 +9,26 @@ LOG_FILE='./logs/sockets.log'
 
 echo '' > $LOG_FILE
 
-echo "Initializing person identifier"
-npm run person-identifier &>> $LOG_FILE &
-
-echo "Waiting few seconds"
-sleep 5
 
 echo "Initializing entrace manager"
 npm run entrace-manager &>> $LOG_FILE &
+echo "Initializing person identifier"
+python2 person-identifier.py
 
-echo "Waiting few seconds"
-sleep 5
 
-echo "Initializing cam mediator"
-npm run cam-mediator &>> $LOG_FILE &
 
-tail -f $LOG_FILE
+# echo "Initializing person identifier"
+# npm run person-identifier &>> $LOG_FILE &
+
+# echo "Initializing person identifier"
+# python2 person-identifier.py &>> $LOG_FILE &
+
+# echo "Waiting few seconds"
+# sleep 5
+
+# echo "Initializing entrace manager"
+# npm run entrace-manager &>> $LOG_FILE &
+
+# tail -f $LOG_FILE
 
 wait

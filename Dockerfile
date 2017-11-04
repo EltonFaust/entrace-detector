@@ -10,6 +10,7 @@ RUN curl -sL https://deb.nodesource.com/setup_7.x | bash \
 
 RUN pip2 install face_recognition
 RUN pip2 install git+https://github.com/dpallot/simple-websocket-server.git
+RUN pip2 install -U python-dotenv
 
 VOLUME /face-detector
 WORKDIR /face-detector
