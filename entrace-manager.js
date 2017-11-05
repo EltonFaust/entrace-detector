@@ -1,9 +1,20 @@
 require('https').globalAgent.options.rejectUnauthorized = false;
 require('dotenv').config();
 
-console.log('Waiting 20 secs')
-require("child_process").execSync('sleep 10');
-console.log('passed 20 secs')
+// console.log('Waiting 20 secs')
+// require("child_process").execSync('sleep 10');
+// console.log('passed 20 secs')
+
+let usersData = {
+    elton_faust: {
+        name: 'Elton H Faust',
+        email: 'elton.h.faust@gmail.com',
+    },
+    andre_nass: {
+        name: 'Andre Nass',
+        email: 'andrenass11@gmail.com',
+    },
+};
 
 
 const express = require('express');
@@ -17,9 +28,21 @@ app.use((req, res, next) => {
     next();
 });
 
-app.get('/img/:user.jpg', (req, res, next) => {
+app.get('/person/:person.jpg', (req, res, next) => {
     res.sendFile(
-        'data/project_dataset/raw/' + req.params.user.replace(/[^\d]/g, '') + '/identifier.jpg',
+        'data/dataset/' + req.params.person.replace(/[^\d]/g, '') + '.jpg',
+        {root: __dirname + '/', dotfiles: 'deny',},
+        (err) => {
+            if (err) {
+                  res.sendStatus(404);
+            }
+        }
+    );
+});
+
+app.get('/occurrences/:id.jpg', (req, res, next) => {
+    res.sendFile(
+        'data/occurrences/' + req.params.id.replace(/[^\d]/g, '') + '.jpg',
         {root: __dirname + '/', dotfiles: 'deny',},
         (err) => {
             if (err) {
@@ -39,7 +62,7 @@ const wsIdentifier = new WebSocket(process.env.PERSON_IDENTIFIER_MANAGER_WS);
 
 let users = {};
 let entraces = {};
-let occourences = [];
+let occurrences = [];
 
 console.log('Pre setting available entraces');
 
@@ -64,6 +87,7 @@ const sendToWS = (ws, type, data) => {
 
     ws.send(JSON.stringify(data));
 }
+
 const sendToIdentifierWS = (entraceId, type, data) => {
     data = data || {};
     data.manager_id = process.env.ENTRACE_MANAGER_ID;
@@ -73,6 +97,14 @@ const sendToIdentifierWS = (entraceId, type, data) => {
     wsIdentifier.send(JSON.stringify(data));
 }
 
+const notifyChangeEntrace = (entraceId) => {
+    let data = {entrace: {id: i, name: entraces[entraceId].name, isBlocked: entraces[entraceId].isBlocked}};
+
+    for (let user of entraces[entraceId].users) {
+        sendToWS(user.client, 'entrace_update', data);
+    }
+}
+
 wssUsers.on('connection', (ws) => {
     console.log('User connected');
 
@@ -80,29 +112,41 @@ wssUsers.on('connection', (ws) => {
         data = JSON.parse(data);
 
         if (typeof users[data.user_id] == 'undefined') {
-            console.log('User set for id %s', data.user_id);
+            if (data.type == 'try_login') {
+                if (typeof usersData[data.user_id] != 'undefined') {
+                    console.log('User set for id %s', data.user_id);
 
-            users[data.user_id] = {
-                client: ws,
-                name: ''
-            };
+                    users[data.user_id] = {
+                        client: ws,
+                        data: usersData[data.user_id],
+                    };
+
+                    users[data.user_id].data.id = data.user_id
+
+                    sendToWS(ws, 'login_response', {success: true, userData: users[data.user_id].data});
+                } else {
+                    sendToWS(ws, 'login_response', {success: false, userData: null});
+                }
+            }
+        }
+
+        if (typeof users[data.user_id] == 'undefined') {
+            console.log('User not initialized with id %s', data.user_id);
+            return;
         }
 
         switch(data.type) {
-            case 'identify_as':
-                users[data.user_id].name = data.name.
-                break;
             case 'list_entraces':
                 let availEntraces = [];
 
                 for (let i in entraces) {
-                    availEntraces.push({id: i, name: entraces[i].name});
+                    availEntraces.push({id: i, name: entraces[i].name, isBlocked: entraces[i].isBlocked});
                 }
 
                 sendToWS(ws, 'list_of_entraces', {list: availEntraces});
                 break;
-            case 'list_occourences':
-                sendToWS(ws, 'list_of_occourences', {list: occourences});
+            case 'list_occurrences':
+                sendToWS(ws, 'list_of_occurrences', {list: occurrences});
                 break;
             case 'join_entrace':
                 if (entraces[data.entrace_id].users.indexOf(data.user_id) == -1) {
@@ -154,6 +198,7 @@ wsIdentifier.on('message', (data) => {
             }, 2000);
             break;
         case 'identified':
+
             break;
         case 'not_identified':
             break;

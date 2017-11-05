@@ -12,8 +12,6 @@ import scipy.misc
 from six.moves.urllib.request import build_opener
 from io import BytesIO
 
-
-
 with open('./data/face-classified-data.txt') as encodingsFile:
 	classifiedData = pickle.load(encodingsFile)
 
@@ -24,6 +22,8 @@ managers['id_1'] = {
 	'client': False,
 	'entraces': {},
 }
+
+occurrenceIdx = 0
 
 print 'Initializing'
 
@@ -36,7 +36,8 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 	try:
 		opener = build_opener()
 		opener.addheaders = [('User-Agent', 'python/face_recognition/1.0')]
-		file = BytesIO(opener.open(managers[managerId]['entraces'][entraceId]['urlImage']).read())
+		fileOpened = opener.open(managers[managerId]['entraces'][entraceId]['urlImage']).read()
+		file = BytesIO(fileOpened)
 		image = scipy.misc.imread(file, mode='RGB')
 		face_locations = face_recognition.face_locations(image)
 
@@ -57,7 +58,22 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 				break
 
 		if matchIdentifier:
-			sendWSMessage(ws, entraceId, 'identified', {'identifier': matchIdentifier})
+			# occurrenceIdx = occurrenceIdx + 1
+			global occurrenceIdx
+			occurrenceIdx += 1
+
+			saveFile = open("./data/occurrences/" + str(occurrenceIdx) + ".jpg", "w")
+			saveFile.write(fileOpened)
+			saveFile.close()
+
+			identifiedData = {
+				'id': occurrenceIdx,
+				'person_name': 'Nome da pessoa ' + str(matchIdentifier),
+				'person_identifier': str(matchIdentifier),
+				'fault_desc': 'Ocorrencia da pessoa ' + str(matchIdentifier),
+				'entrace_id': entraceId
+			}
+			# sendWSMessage(ws, entraceId, 'identified', identifiedData)
 		else:
 			sendWSMessage(ws, entraceId, 'not_identified')
 	except Exception as inst:
