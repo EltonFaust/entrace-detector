@@ -73,7 +73,7 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 				'fault_desc': 'Ocorrencia da pessoa ' + str(matchIdentifier),
 				'entrace_id': entraceId
 			}
-			# sendWSMessage(ws, entraceId, 'identified', identifiedData)
+			sendWSMessage(ws, entraceId, 'identified', {'occurrence': identifiedData})
 		else:
 			sendWSMessage(ws, entraceId, 'not_identified')
 	except Exception as inst:
@@ -121,28 +121,12 @@ class PersonIdentifier(WebSocket):
 			x, y = inst.args
 			print 'x =', x
 			print 'y =', y
-		
-
-		# if (!managers[data.manager_id].client) {
-		# 	console.log('Manager client set for id %s', data.manager_id);
-		# 	managers[data.manager_id].client = ws;
-		# }
-	   # for client in clients:
-	   #	if client != self:
-	   #	   client.sendMessage(self.address[0] + u' - ' + self.data)
 
 	def handleConnected(self):
 		print 'connected'
-		# print(self.address, 'connected')
-		# response = urllib2.urlopen('http://www.example.com/')
-		# html = response.read()
-		# for client in clients:
-		# 	client.sendMessage(self.address[0] + u' - connected')
-		# clients.append(self)
 
 	def handleClose(self):
 		print 'close'
-		# clients.remove(self)
 
 server = SimpleWebSocketServer('', 9001, PersonIdentifier)
 server.serveforever()

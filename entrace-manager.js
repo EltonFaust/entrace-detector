@@ -76,7 +76,7 @@ process.env.ENTRACE_MANAGER_ENTRACES_IDS.split(',').forEach((entrace_id, i) => {
         name: entraceNames[i],
         urlImage: entraceUrlImage[i],
         isBlocked: true,
-        isReceiving: false,
+        // isReceiving: false,
         users: [],
     };
 });
@@ -99,9 +99,12 @@ const sendToIdentifierWS = (entraceId, type, data) => {
 
 const notifyChangeEntrace = (entraceId) => {
     let data = {entrace: {id: i, name: entraces[entraceId].name, isBlocked: entraces[entraceId].isBlocked}};
+    notifyEntraceUsers(entraceId, 'entrace_update', data);
+}
 
+const notifyEntraceUsers = (entraceId, type, data) => {
     for (let user of entraces[entraceId].users) {
-        sendToWS(user.client, 'entrace_update', data);
+        sendToWS(user.client, type, data);
     }
 }
 
@@ -164,6 +167,14 @@ wssUsers.on('connection', (ws) => {
 
                 sendToWS(ws, 'leaved_entrace', {id: data.entrace_id});
                 break;
+            case 'open_entrace':
+                entraces[data.entrace_id].isBlocked = false;
+                notifyChangeEntrace(data.entrace_id);
+                break;
+            case 'close_entrace':
+                entraces[data.entrace_id].isBlocked = true;
+                notifyChangeEntrace(data.entrace_id);
+                break;
         }
     });
 
@@ -192,15 +203,23 @@ wsIdentifier.on('message', (data) => {
         case 'initialized':
             setTimeout(() => {
                 entraces[data.entrace_id].isBlocked = false;
-                entraces[data.entrace_id].isReceiving = true;
+                // entraces[data.entrace_id].isReceiving = true;
 
+                notifyChangeEntrace(data.entrace_id);
                 sendToIdentifierWS(data.entrace_id, 'start_identifier');
             }, 2000);
             break;
         case 'identified':
+            entraces[data.entrace_id].isBlocked = true;
+            occurrences.push(data.occurrence);
 
+            notifyChangeEntrace(data.entrace_id);
+            notifyEntraceUsers(data.entrace_id, 'new_occurrence', data.occurrence);
             break;
         case 'not_identified':
+            setTimeout(() => {
+                sendToIdentifierWS(data.entrace_id, 'start_identifier');
+            }, 5000);
             break;
     }
 });
