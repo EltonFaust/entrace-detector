@@ -1,6 +1,31 @@
-
+# -*- coding: utf-8 -*- 
 # https://github.com/dpallot/simple-websocket-server
 # https://github.com/ageitgey/face_recognition
+
+personOcurrences = {
+	'00000000001': {
+		'name': 'Elton Henrique Faust',
+		'fault': 'Uso excessivo do XGH (EXTREME GO HORSE PROCESS)'
+	},
+	'00000000002': {
+		'name': 'Elvis Henrique Faust',
+		'fault': 'Excesso de preguiça'
+	},
+	'00000000003': {
+		'name': 'Amy Adams',
+		'fault': 'Uso de loop temporal'
+	},
+	'00000000004': {
+		'name': 'Steve Carell',
+		'fault': "That's What She Said"
+	},
+	'00000000005': {
+		'name': 'André Nass',
+		'fault': 'Bandido 157'
+	},
+}
+
+
 
 import urllib2
 import pickle
@@ -60,6 +85,7 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 		if matchIdentifier:
 			# occurrenceIdx = occurrenceIdx + 1
 			global occurrenceIdx
+			global personOcurrences
 			occurrenceIdx += 1
 
 			saveFile = open("./data/occurrences/" + str(occurrenceIdx) + ".jpg", "w")
@@ -68,10 +94,12 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 
 			identifiedData = {
 				'id': occurrenceIdx,
-				'person_name': 'Nome da pessoa ' + str(matchIdentifier),
-				'person_identifier': str(matchIdentifier),
-				'fault_desc': 'Ocorrencia da pessoa ' + str(matchIdentifier),
-				'entrace_id': entraceId
+				'person_name': personOcurrences[matchIdentifier]['name'],
+				'person_identifier': matchIdentifier,
+				'fault_desc': personOcurrences[matchIdentifier]['fault'],
+				'entrace_id': entraceId,
+				'status': 0,
+				'status_message': ''
 			}
 			sendWSMessage(ws, entraceId, 'identified', {'occurrence': identifiedData})
 		else:

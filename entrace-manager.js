@@ -98,12 +98,22 @@ const sendToIdentifierWS = (entraceId, type, data) => {
 }
 
 const notifyChangeEntrace = (entraceId) => {
-    let data = {entrace: {id: i, name: entraces[entraceId].name, isBlocked: entraces[entraceId].isBlocked}};
+    let data = {entrace: {id: entraceId, name: entraces[entraceId].name, isBlocked: entraces[entraceId].isBlocked}};
     notifyEntraceUsers(entraceId, 'entrace_update', data);
 }
 
 const notifyEntraceUsers = (entraceId, type, data) => {
-    for (let user of entraces[entraceId].users) {
+    console.log('Notifying "%s" to entrace users "%s"', type, JSON.stringify(entraces[entraceId]));
+    
+    for (let userIdx of entraces[entraceId].users) {
+        sendToWS(users[userIdx].client, type, data);
+    }
+}
+
+const notifyAllUsers = (type, data) => {
+    console.log('Notifying "%s" to all users', type);
+    
+    for (let user of users) {
         sendToWS(user.client, type, data);
     }
 }
@@ -114,22 +124,20 @@ wssUsers.on('connection', (ws) => {
     ws.on('message', (data) => {
         data = JSON.parse(data);
 
-        if (typeof users[data.user_id] == 'undefined') {
-            if (data.type == 'try_login') {
-                if (typeof usersData[data.user_id] != 'undefined') {
-                    console.log('User set for id %s', data.user_id);
+        if (data.type == 'try_login') {
+            if (typeof usersData[data.user_id] != 'undefined') {
+                console.log('User set for id %s', data.user_id);
 
-                    users[data.user_id] = {
-                        client: ws,
-                        data: usersData[data.user_id],
-                    };
+                users[data.user_id] = {
+                    client: ws,
+                    data: usersData[data.user_id],
+                };
 
-                    users[data.user_id].data.id = data.user_id
+                users[data.user_id].data.id = data.user_id
 
-                    sendToWS(ws, 'login_response', {success: true, userData: users[data.user_id].data});
-                } else {
-                    sendToWS(ws, 'login_response', {success: false, userData: null});
-                }
+                sendToWS(ws, 'login_response', {success: true, userData: users[data.user_id].data});
+            } else {
+                sendToWS(ws, 'login_response', {success: false, userData: null});
             }
         }
 
@@ -147,9 +155,6 @@ wssUsers.on('connection', (ws) => {
                 }
 
                 sendToWS(ws, 'list_of_entraces', {list: availEntraces});
-                break;
-            case 'list_occurrences':
-                sendToWS(ws, 'list_of_occurrences', {list: occurrences});
                 break;
             case 'join_entrace':
                 if (entraces[data.entrace_id].users.indexOf(data.user_id) == -1) {
@@ -174,6 +179,20 @@ wssUsers.on('connection', (ws) => {
             case 'close_entrace':
                 entraces[data.entrace_id].isBlocked = true;
                 notifyChangeEntrace(data.entrace_id);
+                break;
+            case 'list_occurrences':
+                sendToWS(ws, 'list_of_occurrences', {list: occurrences});
+                break;
+            case 'set_occurence_status':
+                for (let idx in occurrences) {
+                    if (occurrences[idx].id == data.occurrence_id) {
+                        occurrences[idx].status = data.status;
+                        occurrences[idx].status_message = data.status_message;
+
+                        notifyAllUsers('occurrence_update', {occurrence: occurrences[idx]});
+                        break;
+                    }
+                }
                 break;
         }
     });
@@ -207,14 +226,14 @@ wsIdentifier.on('message', (data) => {
 
                 notifyChangeEntrace(data.entrace_id);
                 sendToIdentifierWS(data.entrace_id, 'start_identifier');
-            }, 2000);
+            }, 15000);
             break;
         case 'identified':
             entraces[data.entrace_id].isBlocked = true;
             occurrences.push(data.occurrence);
 
             notifyChangeEntrace(data.entrace_id);
-            notifyEntraceUsers(data.entrace_id, 'new_occurrence', data.occurrence);
+            notifyEntraceUsers(data.entrace_id, 'new_occurrence', {occurrence: data.occurrence});
             break;
         case 'not_identified':
             setTimeout(() => {
