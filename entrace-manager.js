@@ -1,9 +1,9 @@
 require('https').globalAgent.options.rejectUnauthorized = false;
 require('dotenv').config();
 
-// console.log('Waiting 20 secs')
+// console.log('Entrace Manager | Waiting 10 secs')
 // require("child_process").execSync('sleep 10');
-// console.log('passed 20 secs')
+// console.log('Entrace Manager | passed 10 secs')
 
 let usersData = {
     elton_faust: {
@@ -56,7 +56,7 @@ const server = require('http').Server(app);
 
 const WebSocket = require('ws');
 
-console.log('Initializing manager sockets');
+console.log('Entrace Manager | Initializing manager sockets');
 const wssUsers = new WebSocket.Server({ server });
 const wsIdentifier = new WebSocket(process.env.PERSON_IDENTIFIER_MANAGER_WS);
 
@@ -64,19 +64,19 @@ let users = {};
 let entraces = {};
 let occurrences = [];
 
-console.log('Pre setting available entraces');
+console.log('Entrace Manager | Pre setting available entraces');
 
 let entraceNames = process.env.ENTRACE_MANAGER_ENTRACES_NAMES.split(',');
 let entraceUrlImage = process.env.ENTRACE_MANAGER_ENTRACES_URL_IMAGE.split(',');
 
 process.env.ENTRACE_MANAGER_ENTRACES_IDS.split(',').forEach((entrace_id, i) => {
-    console.log('Set entrace %s with identifier %s', entraceNames[i], entrace_id);
+    console.log('Entrace Manager | Set entrace %s with identifier %s', entraceNames[i], entrace_id);
 
     entraces[entrace_id] = {
         name: entraceNames[i],
         urlImage: entraceUrlImage[i],
         isBlocked: true,
-        // isReceiving: false,
+        isReceiving: false,
         users: [],
     };
 });
@@ -98,12 +98,12 @@ const sendToIdentifierWS = (entraceId, type, data) => {
 }
 
 const notifyChangeEntrace = (entraceId) => {
-    let data = {entrace: {id: entraceId, name: entraces[entraceId].name, isBlocked: entraces[entraceId].isBlocked}};
+    let data = {entrace: {id: entraceId, name: entraces[entraceId].name, isBlocked: entraces[entraceId].isBlocked, isReceiving: entraces[entraceId].isReceiving}};
     notifyEntraceUsers(entraceId, 'entrace_update', data);
 }
 
 const notifyEntraceUsers = (entraceId, type, data) => {
-    console.log('Notifying "%s" to entrace users "%s"', type, JSON.stringify(entraces[entraceId]));
+    console.log('Entrace Manager | Notifying "%s" to entrace users "%s"', type, JSON.stringify(entraces[entraceId].users));
     
     for (let userIdx of entraces[entraceId].users) {
         sendToWS(users[userIdx].client, type, data);
@@ -111,22 +111,22 @@ const notifyEntraceUsers = (entraceId, type, data) => {
 }
 
 const notifyAllUsers = (type, data) => {
-    console.log('Notifying "%s" to all users', type);
+    console.log('Entrace Manager | Notifying "%s" to all users', type);
     
-    for (let user of users) {
-        sendToWS(user.client, type, data);
+    for (let idx in users) {
+        sendToWS(users[idx].client, type, data);
     }
 }
 
 wssUsers.on('connection', (ws) => {
-    console.log('User connected');
+    console.log('Entrace Manager | User connected');
 
     ws.on('message', (data) => {
         data = JSON.parse(data);
 
         if (data.type == 'try_login') {
             if (typeof usersData[data.user_id] != 'undefined') {
-                console.log('User set for id %s', data.user_id);
+                console.log('Entrace Manager | User set for id %s', data.user_id);
 
                 users[data.user_id] = {
                     client: ws,
@@ -142,7 +142,7 @@ wssUsers.on('connection', (ws) => {
         }
 
         if (typeof users[data.user_id] == 'undefined') {
-            console.log('User not initialized with id %s', data.user_id);
+            console.log('Entrace Manager | User not initialized with id %s', data.user_id);
             return;
         }
 
@@ -151,7 +151,7 @@ wssUsers.on('connection', (ws) => {
                 let availEntraces = [];
 
                 for (let i in entraces) {
-                    availEntraces.push({id: i, name: entraces[i].name, isBlocked: entraces[i].isBlocked});
+                    availEntraces.push({id: i, name: entraces[i].name, isBlocked: entraces[i].isBlocked, isReceiving: entraces[i].isReceiving});
                 }
 
                 sendToWS(ws, 'list_of_entraces', {list: availEntraces});
@@ -180,10 +180,21 @@ wssUsers.on('connection', (ws) => {
                 entraces[data.entrace_id].isBlocked = true;
                 notifyChangeEntrace(data.entrace_id);
                 break;
+            case 'start_receive':
+                entraces[data.entrace_id].isReceiving = true;
+                sendToIdentifierWS(data.entrace_id, 'start_identifier');
+                notifyChangeEntrace(data.entrace_id);
+                break;
+            case 'stop_receive':
+                entraces[data.entrace_id].isBlocked = true;
+                notifyChangeEntrace(data.entrace_id);
+                break;
             case 'list_occurrences':
                 sendToWS(ws, 'list_of_occurrences', {list: occurrences});
                 break;
             case 'set_occurence_status':
+                console.log('Entrace Manager | set_occurence_status %s', JSON.stringify(data));
+
                 for (let idx in occurrences) {
                     if (occurrences[idx].id == data.occurrence_id) {
                         occurrences[idx].status = data.status;
@@ -198,16 +209,16 @@ wssUsers.on('connection', (ws) => {
     });
 
     ws.on('error', (e) => {
-        console.log('%s on wssUsers', e.message)
+        console.log('Entrace Manager | %s on wssUsers', e.message)
     })
 });
 
 wssUsers.on('error', (e) => {
-    console.log('%s on wsIdentifier', e.message)
+    console.log('Entrace Manager | %s on wsIdentifier', e.message)
 })
 
 wsIdentifier.on('open', () => {
-    console.log('Manager connected to identifier, initializing identifier for entraces');
+    console.log('Entrace Manager | Manager connected to identifier, initializing identifier for entraces');
 
     for (let entraceId in entraces) {
         sendToIdentifierWS(entraceId, 'initialize', {url_image: entraces[entraceId].urlImage})
@@ -215,38 +226,43 @@ wsIdentifier.on('open', () => {
 });
 
 wsIdentifier.on('message', (data) => {
-    console.log('Message "%s" received from person identifier', data);
+    console.log('Entrace Manager | Message "%s" received from person identifier', data);
     data = JSON.parse(data);
 
     switch (data.type) {
         case 'initialized':
             setTimeout(() => {
                 entraces[data.entrace_id].isBlocked = false;
-                // entraces[data.entrace_id].isReceiving = true;
+                entraces[data.entrace_id].isReceiving = true;
 
                 notifyChangeEntrace(data.entrace_id);
                 sendToIdentifierWS(data.entrace_id, 'start_identifier');
             }, 15000);
             break;
         case 'identified':
-            entraces[data.entrace_id].isBlocked = true;
-            occurrences.push(data.occurrence);
+            if (entraces[data.entrace_id].isReceiving) {
+                entraces[data.entrace_id].isBlocked = true;
+                entraces[data.entrace_id].isReceiving = false;
+                occurrences.unshift(data.occurrence);
 
-            notifyChangeEntrace(data.entrace_id);
-            notifyEntraceUsers(data.entrace_id, 'new_occurrence', {occurrence: data.occurrence});
+                notifyChangeEntrace(data.entrace_id);
+                notifyEntraceUsers(data.entrace_id, 'new_occurrence', {occurrence: data.occurrence});
+            }
             break;
         case 'not_identified':
-            setTimeout(() => {
-                sendToIdentifierWS(data.entrace_id, 'start_identifier');
-            }, 5000);
+            if (entraces[data.entrace_id].isReceiving) {
+                setTimeout(() => {
+                    sendToIdentifierWS(data.entrace_id, 'start_identifier');
+                }, 5000);
+            }
             break;
     }
 });
 
 wsIdentifier.on('error', (e) => {
-    console.log('%s on wsIdentifier', e.message)
+    console.log('Entrace Manager | %s on wsIdentifier', e.message)
 })
 
 server.listen(3000, () => {
-  console.log('Listening on %d', server.address().port);
+  console.log('Entrace Manager | Listening on %d', server.address().port);
 });

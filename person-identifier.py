@@ -27,7 +27,7 @@ personOcurrences = {
 
 
 
-import urllib2
+import urllib3
 import pickle
 import json
 import face_recognition
@@ -37,7 +37,7 @@ import scipy.misc
 from six.moves.urllib.request import build_opener
 from io import BytesIO
 
-with open('./data/face-classified-data.txt') as encodingsFile:
+with open('./data/face-classified-data.txt', 'rb') as encodingsFile:
 	classifiedData = pickle.load(encodingsFile)
 
 managers = {}
@@ -50,7 +50,7 @@ managers['id_1'] = {
 
 occurrenceIdx = 0
 
-print 'Initializing'
+print('Initializing')
 
 def sendWSMessage(ws, entraceId, messageType, data={}):
 	data['entrace_id'] = entraceId
@@ -67,7 +67,7 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 		face_locations = face_recognition.face_locations(image)
 
 		if len(face_locations) == 0:
-			print 'not found any face'
+			print('not found any face')
 			getEntracePictureToIdentifyFace(ws, managerId, entraceId)
 			return
 
@@ -78,7 +78,7 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 
 		for (i, match) in enumerate(matches):
 			if match:
-				print 'Match found ', classifiedData['labels'][i]
+				print('Match found ', classifiedData['labels'][i])
 				matchIdentifier = classifiedData['labels'][i]
 				break
 
@@ -88,7 +88,7 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 			global personOcurrences
 			occurrenceIdx += 1
 
-			saveFile = open("./data/occurrences/" + str(occurrenceIdx) + ".jpg", "w")
+			saveFile = open("./data/occurrences/" + str(occurrenceIdx) + ".jpg", "wb")
 			saveFile.write(fileOpened)
 			saveFile.close()
 
@@ -104,32 +104,34 @@ def getEntracePictureToIdentifyFace(ws, managerId, entraceId):
 			sendWSMessage(ws, entraceId, 'identified', {'occurrence': identifiedData})
 		else:
 			sendWSMessage(ws, entraceId, 'not_identified')
+
+		managers[managerId]['entraces'][entraceId]['isReceiving'] = False
 	except Exception as inst:
-		print type(inst)     # the exception instance
-		print inst.args      # arguments stored in .args
-		print inst           # __str__ allows args to be printed directly
+		print(type(inst))
+		print(inst.args)
+		print(inst)
 		x, y = inst.args
-		print 'x =', x
-		print 'y =', y
+		print('x =', x)
+		print('y =', y)
 
 class PersonIdentifier(WebSocket):
 	def handleMessage(self):
-		print 'Data received {}'.format(self.data)
+		print('Data received {}'.format(self.data))
 
 		try:
 			data = json.loads(self.data)
 
 			if not managers[data['manager_id']]:
-				print 'Manager with identifier {} not configured'.format(data['manager_id'])
+				print('Manager with identifier {} not configured'.format(data['manager_id']))
 				return
 
 			if not managers[data['manager_id']]['client']:
-				print 'Manager client set for id {}'.format(data['manager_id'])
+				print('Manager client set for id {}'.format(data['manager_id']))
 				managers[data['manager_id']]['client'] = self
 
 			if data['type'] == 'initialize':
 				managers[data['manager_id']]['entraces'][data['entrace_id']] = {
-					'isReceiving': True,
+					'isReceiving': False,
 					'urlImage': data['url_image']
 				}
 
@@ -137,30 +139,32 @@ class PersonIdentifier(WebSocket):
 				return
 
 			if not managers[data['manager_id']]['entraces'][data['entrace_id']]:
-				print 'Entrace with id {} not initialized'.format(data['entrace_id'])
+				print('Entrace with id {} not initialized'.format(data['entrace_id']))
 				return
 
 			if data['type'] == 'start_identifier':
-				getEntracePictureToIdentifyFace(self, data['manager_id'], data['entrace_id'])
+				if not managers[data['manager_id']]['entraces'][data['entrace_id']]['isReceiving']:
+					managers[data['manager_id']]['entraces'][data['entrace_id']]['isReceiving'] = True
+					getEntracePictureToIdentifyFace(self, data['manager_id'], data['entrace_id'])
 		except Exception as inst:
-			print type(inst)     # the exception instance
-			print inst.args      # arguments stored in .args
-			print inst           # __str__ allows args to be printed directly
+			print(type(inst))
+			print(inst.args)
+			print(inst)
 			x, y = inst.args
-			print 'x =', x
-			print 'y =', y
+			print('x =', x)
+			print('y =', y)
 
 	def handleConnected(self):
-		print 'connected'
+		print('connected')
 
 	def handleClose(self):
-		print 'close'
+		print('close')
 
 server = SimpleWebSocketServer('', 9001, PersonIdentifier)
 server.serveforever()
 
 
-# print classifiedData['labels'][0]
+# print(classifiedData['labels'][0]
 
 
 
