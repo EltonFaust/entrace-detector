@@ -1,9 +1,9 @@
 require('https').globalAgent.options.rejectUnauthorized = false;
 require('dotenv').config();
 
-// console.log('Entrace Manager | Waiting 10 secs')
-// require("child_process").execSync('sleep 10');
-// console.log('Entrace Manager | passed 10 secs')
+console.log('Entrace Manager | Waiting 10 secs')
+require("child_process").execSync('sleep 10');
+console.log('Entrace Manager | passed 10 secs')
 
 let usersData = {
     elton_faust: {
